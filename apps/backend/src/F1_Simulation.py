@@ -724,23 +724,36 @@ class SimulationResults:
 
     def print_summary(self):
         stats = self.get_statistics()
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Strategy: {self.strategy.name}")
         print(f"Pit stops: {self.strategy.pit_laps}")
-        print(f"Compounds: {[c.value for c in self.strategy.tire_compounds]}")
-        print(f"{'='*60}")
+
+        # 🛞 Show detailed tire stints with hardness and duration
+        print(f"Stint details:")
+        stint_ends = self.strategy.pit_laps + [self.race_conditions.race_laps]
+        prev = 0
+        for compound, end in zip(self.strategy.tire_compounds, stint_ends):
+            length = end - prev
+            print(f"  {compound.value.capitalize():<10} → Lap {end:<3d} "
+                  f"(stint length: {length:2d} laps)")
+            prev = end
+
+        print(f"{'=' * 60}")
         print(f"\nRace Time:")
-        print(f"  Mean:   {stats['mean_time']:.2f}s ({stats['mean_time']/60:.1f} min)")
+        print(f"  Mean:   {stats['mean_time']:.2f}s ({stats['mean_time'] / 60:.1f} min)")
         print(f"  Median: {stats['median_time']:.2f}s")
         print(f"  Std:    {stats['std_time']:.2f}s")
+
         print(f"\nFinishing Position:")
         print(f"  Mean:   P{stats['mean_position']:.1f}")
         print(f"  Median: P{stats['median_position']:.0f}")
+
         print(f"\nProbabilities:")
-        print(f"  Win (P1):  {stats['win_probability']*100:.1f}%")
-        print(f"  Podium:    {stats['podium_probability']*100:.1f}%")
-        print(f"  Top 5:     {stats['top5_probability']*100:.1f}%")
-        print(f"  DNF:       {stats['dnf_probability']*100:.2f}%")
+        print(f"  Win (P1):  {stats['win_probability'] * 100:.1f}%")
+        print(f"  Podium:    {stats['podium_probability'] * 100:.1f}%")
+        print(f"  Top 5:     {stats['top5_probability'] * 100:.1f}%")
+        print(f"  DNF:       {stats['dnf_probability'] * 100:.2f}%")
+
 
 # ============================================================================
 # STRATEGY OPTIMIZER (updated)
