@@ -1,0 +1,16 @@
+{
+  "name": "hacktx_kv",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm:dev -w apps/backend\" \"npm:dev -w apps/frontend\"",
+    "build": "npm run build -w apps/backend && npm run build -w apps/frontend",
+    "start": "npm run start -w apps/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
