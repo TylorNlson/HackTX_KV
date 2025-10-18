@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Race Decision System - HPC Bridge</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏁 F1 Race Decision System</h1>
+            <p class="subtitle">HPC-Powered Real-Time Strategy Intelligence</p>
+        </header>
+
+        <div class="dashboard">
+            <!-- Race Context Panel -->
+            <section class="panel race-context">
+                <h2>Race Context</h2>
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label>Current Lap</label>
+                        <input type="number" id="currentLap" value="1" min="1" max="60">
+                    </div>
+                    <div class="input-group">
+                        <label>Position</label>
+                        <input type="number" id="position" value="3" min="1" max="20">
+                    </div>
+                    <div class="input-group">
+                        <label>Tire Age (laps)</label>
+                        <input type="number" id="tireAge" value="10" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label>Tire Compound</label>
+                        <select id="tireCompound">
+                            <option value="soft">Soft</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Fuel Remaining (kg)</label>
+                        <input type="number" id="fuelRemaining" value="70.0" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label>Gap to Leader (s)</label>
+                        <input type="number" id="gapLeader" value="8.5" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label>Gap to Next (s)</label>
+                        <input type="number" id="gapNext" value="1.2" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label>Track Temp (°C)</label>
+                        <input type="number" id="trackTemp" value="42" step="0.5">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="getRealTimeDecision()">
+                    Get Real-Time Decision
+                </button>
+            </section>
+
+            <!-- Decision Output Panel -->
+            <section class="panel decision-output">
+                <h2>🎯 Decision Recommendation</h2>
+                <div id="decisionResult" class="result-box">
+                    <p class="placeholder">Run analysis to get recommendations...</p>
+                </div>
+            </section>
+
+            <!-- Strategy Simulation Panel -->
+            <section class="panel strategy-sim">
+                <h2>Strategy Simulation</h2>
+                <div class="input-group">
+                    <label>Weather Condition</label>
+                    <select id="weatherCondition">
+                        <option value="dry" selected>Dry</option>
+                        <option value="wet">Wet</option>
+                        <option value="mixed">Mixed</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="runStrategySimulation()">
+                    Run HPC Simulation
+                </button>
+                <div id="strategyResults" class="result-box">
+                    <p class="placeholder">No simulation results yet...</p>
+                </div>
+            </section>
+
+            <!-- Strategy Summary Panel -->
+            <section class="panel strategy-summary">
+                <h2>📊 Strategy Summary</h2>
+                <div id="strategySummary" class="result-box">
+                    <p class="placeholder">Generate strategy summary...</p>
+                </div>
+            </section>
+
+            <!-- Aerodynamics Panel -->
+            <section class="panel aero-setup">
+                <h2>Aerodynamic Setup</h2>
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label>Drag Coefficient (0.25-0.35)</label>
+                        <input type="range" id="dragCoef" min="0.25" max="0.35" step="0.01" value="0.30">
+                        <span id="dragValue">0.30</span>
+                    </div>
+                    <div class="input-group">
+                        <label>Downforce Level (0.4-0.6)</label>
+                        <input type="range" id="downforce" min="0.40" max="0.60" step="0.01" value="0.50">
+                        <span id="downforceValue">0.50</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="simulateAeroSetup()">
+                    Simulate Aero Setup
+                </button>
+                <div id="aeroResults" class="result-box">
+                    <p class="placeholder">Adjust settings and simulate...</p>
+                </div>
+            </section>
+
+            <!-- Performance Metrics -->
+            <section class="panel metrics">
+                <h2>Performance Metrics</h2>
+                <div id="performanceMetrics" class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="simTime">--</div>
+                        <div class="metric-label">Simulation Time (ms)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="strategiesEval">--</div>
+                        <div class="metric-label">Strategies Evaluated</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="optimalTime">--</div>
+                        <div class="metric-label">Optimal Race Time (s)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="timeSaved">--</div>
+                        <div class="metric-label">Time Advantage (s)</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <footer>
+            <p>HackTX F1 Race Decision System - Bridging HPC with Real-Time Racing</p>
+        </footer>
+    </div>
+
+    <script src="static/js/app.js"></script>
+</body>
+</html>
