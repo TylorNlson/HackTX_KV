@@ -1,5 +1,6 @@
 // F1 Race Decision System - Frontend JavaScript
-const API_BASE_URL = 'http://localhost:5000/api';
+// Auto-detect API URL - if running on different port, update here
+const API_BASE_URL = window.location.port === '8001' ? 'http://localhost:5001/api' : 'http://localhost:5000/api';
 
 // Update slider values
 document.getElementById('dragCoef').addEventListener('input', (e) => {
