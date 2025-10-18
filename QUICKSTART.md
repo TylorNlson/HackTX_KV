@@ -5,8 +5,8 @@ Get started with the F1 Race Strategy System in under 5 minutes!
 ## Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/TylorNlson/HackTX_KV.git
+# Clone the repository (adjust URL to your fork/repo)
+git clone <repository-url>
 cd HackTX_KV
 
 # Install dependencies

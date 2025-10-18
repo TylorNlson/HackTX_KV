@@ -36,8 +36,8 @@ This solution bridges that gap by:
 ### Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/TylorNlson/HackTX_KV.git
+# Clone the repository (adjust URL to your fork/repo)
+git clone <repository-url>
 cd HackTX_KV
 
 # Install dependencies
