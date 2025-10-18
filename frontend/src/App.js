@@ -1,12 +1,18 @@
-import control_panel from "./assets/control_panel.png";
 import "./App.css";
+import SummaryPanel from "./components/summary";
+import SettingsPanel from "./components/settings";
+import GalaxyPanel from "./components/galaxy";
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={control_panel} alt="control panel" />
-      </header>
+      <div className="App-background" alt="space background">
+        <div className="App-dashboard">
+          <SettingsPanel />
+          <SummaryPanel />
+          <GalaxyPanel />
+        </div>
+      </div>
     </div>
   );
 }

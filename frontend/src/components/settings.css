@@ -1,0 +1,17 @@
+.settings-panel {
+    /* panel style */
+    background-color: #011025;   /* navy blue */
+    border-radius: 15px;         /* rounded corners */
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5); /* subtle glow */
+
+    /* size and layout */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* font style */
+    font-size: 1.2rem;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
