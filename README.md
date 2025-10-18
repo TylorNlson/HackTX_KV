@@ -57,6 +57,14 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
+## ⚙️ Configuration
+
+The system uses the following default ports:
+- **API Server**: Port 5000 (configurable via `FLASK_PORT` environment variable)
+- **Web Dashboard**: Port 8000 (or any HTTP server port)
+
+The frontend automatically detects the API endpoint based on its own hostname and port. If the frontend runs on port 8001, it will connect to API on port 5001 (useful for development). Otherwise, it defaults to port 5000.
+
 ## 🏃 Quick Start
 
 ### Start the API Server

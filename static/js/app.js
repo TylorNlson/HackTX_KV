@@ -1,6 +1,14 @@
 // F1 Race Decision System - Frontend JavaScript
-// Auto-detect API URL - if running on different port, update here
-const API_BASE_URL = window.location.port === '8001' ? 'http://localhost:5001/api' : 'http://localhost:5000/api';
+// API Configuration - automatically detects the correct API endpoint
+// Development: Frontend on 8000/8001 -> API on 5000/5001
+// Production: Use same hostname as frontend
+const getApiBaseUrl = () => {
+    const hostname = window.location.hostname;
+    // In development, we may run frontend on 8001 with API on 5001
+    const apiPort = window.location.port === '8001' ? '5001' : '5000';
+    return `http://${hostname}:${apiPort}/api`;
+};
+const API_BASE_URL = getApiBaseUrl();
 
 // Update slider values
 document.getElementById('dragCoef').addEventListener('input', (e) => {
