@@ -51,6 +51,7 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
 
       console.log("Received simulation data:", data);
   
+      const raceResults = data.results;
       const totalRuns = raceResults.length;
 
       // Example: if multiple entries share the same strategy name, count frequency
