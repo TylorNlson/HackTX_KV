@@ -980,7 +980,7 @@ def serialize_results(results: list[tuple[Strategy, SimulationResults, float]]):
 # MAIN - UPDATED FOR NEW TRACK DATABASE
 # ============================================================================
 
-def main():
+def main(track_id, driver_mass, car_mass, max_power, downforce, drag, reliability, mileage, runs):
     print("="*80)
     print(" F1 STRATEGY SIMULATOR - ENGINEERING MODE")
     print("="*80)
@@ -1001,7 +1001,8 @@ def main():
 
     # SELECT CAR
     # Option 1: Use preset
-    my_car = F1_CAR_PRESETS["red_bull_rb20"]
+    #my_car = F1_CAR_PRESETS["red_bull_rb20"]
+    my_car = create_custom_car(car_mass, driver_mass, max_power, downforce, drag, reliability, mileage)
 
     # Option 2: Create custom car
     # my_car = create_custom_car(
@@ -1052,7 +1053,7 @@ def main():
         fuel_start=105.0,
     )
 
-    sim_config = SimulationConfig(num_runs=3000, random_seed=42)
+    sim_config = SimulationConfig(num_runs=runs, random_seed=42)
 
     print(f"\n⚙️  Simulation: {sim_config.num_runs:,} Monte Carlo runs")
 
