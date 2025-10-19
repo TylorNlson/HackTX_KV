@@ -9,6 +9,13 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
 from enum import Enum
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from dataclasses import asdict
+from typing import List, Tuple
+
+
+
 
 # ============================================================================
 # CONFIGURATION CLASSES
@@ -916,6 +923,59 @@ class StrategyOptimizer:
                   f"Pod: {stats['podium_probability']*100:5.1f}% | Avg: P{stats['mean_position']:.1f}")
         return results
 
+
+
+def to_serializable(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.generic):  # e.g., np.float64
+        return obj.item()
+    elif isinstance(obj, dict):
+        return {k: to_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_serializable(x) for x in obj]
+    else:
+        return obj
+
+def serialize_strategy(strategy):
+    d = asdict(strategy)
+    # Convert enums to strings if needed
+    d['tire_compounds'] = [str(tc) for tc in d['tire_compounds']]
+    d['engine_modes'] = [str(em) for em in d['engine_modes']]
+    return d
+
+def serialize_sim_results(sim_result: SimulationResults):
+    stats = sim_result.get_statistics()  # get all the calculated stats
+
+    def to_serializable(obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, np.generic):  # e.g., np.float64
+            return obj.item()
+        elif hasattr(obj, "__dict__"):
+            # For nested objects like RaceConditions or SimulationConfig
+            return {k: to_serializable(v) for k, v in vars(obj).items()}
+        elif isinstance(obj, dict):
+            return {k: to_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [to_serializable(v) for v in obj]
+        else:
+            return obj
+
+    clean_stats = to_serializable(stats)
+    return clean_stats
+
+def serialize_results(results: list[tuple[Strategy, SimulationResults, float]]):
+    serialized = []
+    for strategy, sim_result, score in results:
+        serialized.append([
+            serialize_strategy(strategy),  # as before
+            serialize_sim_results(sim_result),
+            score
+        ])
+    return serialized
+
+
 # ============================================================================
 # MAIN - UPDATED FOR NEW TRACK DATABASE
 # ============================================================================
@@ -1020,7 +1080,12 @@ def main():
     print(f"Best Strategy: {results[0][0].name}")
     print(f"Expected Result: P{best_stats['mean_position']:.1f} (Win: {best_stats['win_probability']*100:.1f}%)")
 
-    return results
+    print("Type of result:", type(results))
+    print("Example content:", str(results)[:500])
+
+    clean_results = serialize_results(results)
+    return JSONResponse(content=clean_results)
+
 
 if __name__ == "__main__":
     results = main()
