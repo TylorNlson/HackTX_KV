@@ -150,7 +150,7 @@ class CarEngineering:
         straight_delta = (1.0 - straight_multiplier) * track.base_lap_time * straight_fraction * 0.4
         delta += corner_delta + straight_delta
         # ↓ NEW: cap total delta to ±0.4 s/lap realistic range
-        delta = np.clip(delta, -0.4, 0.4)
+        delta = np.clip(delta, -0.8, 0.2)
         return delta
 
     def get_fuel_consumption_rate(self, engine_mode: EngineMode, track_fuel_factor: float = 1.0) -> float:
@@ -458,9 +458,9 @@ F1_CAR_PRESETS = {
     "ferrari_sf24": create_custom_car(
         name="Ferrari SF-24",
         mass_kg=798.0,
-        max_power_kw=740.0,
-        downforce_coeff=3.4,
-        drag_coeff=0.86,
+        max_power_kw=760.0,
+        downforce_coeff=3.55,
+        drag_coeff=0.85,
         reliability=0.95,
     ),
     "mercedes_w15": create_custom_car(
@@ -500,7 +500,7 @@ class CompetitorField:
         backmarkers = n - top_teams - midfield
         pace = np.zeros(n)
         pace[:top_teams] = self.rng.uniform(-0.3, 0.4, top_teams)
-        pace[top_teams:top_teams + midfield] = self.rng.uniform(0.3, 1.3, midfield)
+        pace[top_teams:top_teams + midfield] = self.rng.uniform(0.4, 1.2, midfield)
         if backmarkers > 0:
             pace[top_teams + midfield:] = self.rng.uniform(1.2, 2.5, backmarkers)
         pace += self.rng.normal(0, 0.1, n)
@@ -596,7 +596,7 @@ class RaceSimulator:
 
         wear_multipliers = np.clip(self.rng.normal(1.0, self.cfg.wear_rate_noise_std, self.N_runs), 0.6, 1.4)
         fuel_multipliers = np.clip(self.rng.normal(1.0, self.cfg.fuel_burn_noise_std, self.N_runs), 0.9, 1.1)
-        lap_noise = self.rng.normal(0, self.cfg.lap_time_noise_std, shape)
+        lap_noise = self.rng.normal(0, self.cfg.lap_time_noise_std * 1.3, shape)
         safety_cars = self.rng.random(shape) < self.rc.safety_car_prob
 
         competitor_times_all_runs = self._simulate_competitor_field_stochastic()
@@ -980,7 +980,7 @@ def serialize_results(results: list[tuple[Strategy, SimulationResults, float]]):
 # MAIN - UPDATED FOR NEW TRACK DATABASE
 # ============================================================================
 
-def main(track_id, driver_mass, car_mass, max_power, downforce, drag, reliability, mileage, runs):
+def main():
     print("="*80)
     print(" F1 STRATEGY SIMULATOR - ENGINEERING MODE")
     print("="*80)
@@ -1001,7 +1001,7 @@ def main(track_id, driver_mass, car_mass, max_power, downforce, drag, reliabilit
 
     # SELECT CAR
     # Option 1: Use preset
-    my_car = create_custom_car(car_mass, driver_mass, max_power, downforce, drag, reliability, mileage)
+    my_car = F1_CAR_PRESETS["red_bull_rb20"]
 
     # Option 2: Create custom car
     # my_car = create_custom_car(
@@ -1052,7 +1052,7 @@ def main(track_id, driver_mass, car_mass, max_power, downforce, drag, reliabilit
         fuel_start=105.0,
     )
 
-    sim_config = SimulationConfig(num_runs=runs, random_seed=42)
+    sim_config = SimulationConfig(num_runs=3000, random_seed=42)
 
     print(f"\n⚙️  Simulation: {sim_config.num_runs:,} Monte Carlo runs")
 

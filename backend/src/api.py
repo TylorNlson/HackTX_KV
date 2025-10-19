@@ -3,8 +3,17 @@ from pydantic import BaseModel
 import uvicorn
 import F1_Simulation
 
+from fastapi.middleware.cors import CORSMiddleware
+
 # --- FastAPI App ---
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],  # allow POST, GET, etc.
+    allow_headers=["*"],
+)
 
 class SimInput(BaseModel):
     track_id: str
