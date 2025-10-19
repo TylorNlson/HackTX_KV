@@ -35,7 +35,7 @@ function Galaxy({ plotData }) {
               paper_bgcolor: 'rgba(0,0,0,0)',
               plot_bgcolor: 'rgba(0,0,0,0)',
               font: { color: 'white' },
-              margin: { t: 50, l: 50, r: 50, b: 50 },
+              margin: { t: 35, l: 45, r: 15, b: 35 },
               autosize: true
             }}
             style={{ width: '100%', height: '100%' }}
@@ -64,7 +64,7 @@ function Galaxy({ plotData }) {
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 font: { color: 'white' },
-                margin: { t: 50, l: 50, r: 50, b: 50 },
+                margin: { t: 35, l: 45, r: 15, b: 35 },
                 autosize: true
               }}
               style={{ width: '100%', height: '100%' }}
