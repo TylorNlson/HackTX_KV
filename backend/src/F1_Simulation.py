@@ -763,7 +763,7 @@ def main():
     print("="*70)
 
     # Load track database
-    track_db = TrackDatabase("./data/track_configs.json")
+    track_db = TrackDatabase("data/track_configs.json")
 
     # Show available tracks
     track_db.print_tracks()

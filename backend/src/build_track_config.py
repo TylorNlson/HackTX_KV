@@ -107,38 +107,38 @@ def extract_configs(races, circuits, race_results, fastest_laps, engines):
 
 
 # Example usage
-with open("./data/circuits.json") as f:
+with open("data/circuits.json") as f:
     circuits = json.load(f)
 
-with open("./data/qualifying-results.json") as f:
+with open("data/qualifying-results.json") as f:
     qualifying_results = json.load(f)
 
-with open("./data/race-results.json") as f:
+with open("data/race-results.json") as f:
     race_results = json.load(f)
 
-with open("./data/practice-4-results.json") as f:
+with open("data/practice-4-results.json") as f:
     practice_results = json.load(f)
 
-with open("./data/pit-stops.json") as f:
+with open("data/pit-stops.json") as f:
     pit_stops = json.load(f)
 
-with open("./data/races.json") as f:
+with open("data/races.json") as f:
     race_metadata = json.load(f)
 
-with open("./data/fastest-laps.json") as f:
+with open("data/fastest-laps.json") as f:
     fastest_laps = json.load(f)
 
-with open("./data/engines.json") as f:
+with open("data/engines.json") as f:
     engine_metadata = json.load(f)
 
 #track_configs = generate_track_config(circuits, qualifying_results, race_results, practice_results, pit_stops, race_metadata)
 track_configs = extract_configs(race_metadata, circuits, race_results, fastest_laps, engine_metadata)
 
-with open("./data/track_configs_2.json", "w") as f:
+with open("data/track_configs_2.json", "w") as f:
     json.dump(track_configs["tracks"], f, indent=2)
 
 with open("./data/car_configs.json", "w") as f:
     json.dump(track_configs["cars"], f, indent=2)
 
-with open("./data/baseline_configs.json", "w") as f:
+with open("data/baseline_configs.json", "w") as f:
     json.dump(track_configs["baselines"], f, indent=2)
