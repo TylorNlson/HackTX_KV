@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./settings.css";
 
-function Settings({setSummaryData, setPlotData}) {
+function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
   const [settings, setSettings] = useState({
     track: "",
     trackTemp: "",
@@ -53,6 +53,9 @@ function Settings({setSummaryData, setPlotData}) {
     // TO DO back end call for plot data
     const plotData = {hist_data: [80, 82, 79, 81, 83, 78, 80, 82], line_data: {x: [1,2,3,4,5,6,7,8], y: [81,80.5,80.2,80.1,80.0,79.8,79.7,79.5]}}; // TO DO place holder data
     setPlotData(plotData);
+
+    const plotGalaxyData = {x: [1,2,3,4,5], y: [10,20,15,25,30], size: [5,10,15,20,25]}; // TO DO place holder data
+    setPlotGalaxyData(plotGalaxyData);
   }
 
   return (
