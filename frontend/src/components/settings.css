@@ -6,18 +6,17 @@
 
     /* size and layout */
     width: 100%;
+    min-width: 0;
     height: 100%;
     display: flex;
-    align-items: center;
-    justify-content: top center;
     flex-direction: column; /* stack children vertically */
+    padding: 20px;
     gap: 1rem;    
 
     /* font style */
     font-size: 1.2rem;
     color: white;
     text-align: center;
-    padding: 20px;
 }
 
 /* .env-settings, .car-setup, .race-conditions, .strategy {

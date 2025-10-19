@@ -33,9 +33,11 @@ function Graphs({ plotData }) {
               paper_bgcolor: 'rgba(0,0,0,0)',
               plot_bgcolor: 'rgba(0,0,0,0)',
               font: { color: 'white' },
-              margin: { t: 50, l: 50, r: 20, b: 50 },
+              margin: { t: 50, l: 50, r: 50, b: 50 },
+              autosize: true
             }}
-            style={{ width: '100%', height: '45%' }}
+            style={{ width: '100%', height: '100%' }}
+            config={{ responsive: true }}
           />
         </div>
 
@@ -59,9 +61,11 @@ function Graphs({ plotData }) {
               paper_bgcolor: 'rgba(0,0,0,0)',
               plot_bgcolor: 'rgba(0,0,0,0)',
               font: { color: 'white' },
-              margin: { t: 50, l: 50, r: 20, b: 50 },
+              margin: { t: 50, l: 50, r: 50, b: 50 },
+              autosize: true
             }}
-            style={{ width: '100%', height: '45%' }}
+            style={{ width: '100%', height: '100%' }}
+            config={{ responsive: true }}
           />
          </div>
       </div>
