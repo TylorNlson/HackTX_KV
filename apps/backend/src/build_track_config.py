@@ -47,6 +47,64 @@ def generate_track_config(circuits, qualifying_results, race_results, practice_r
 
     return track_configs
 
+def extract_configs(races, circuits, race_results, fastest_laps, engines):
+    tracks = []
+    cars = []
+    baselines = []
+
+    for race in races:
+        # --- Track Info ---
+        circuit = next((c for c in circuits if c["id"] == race["circuitId"]), None)
+        if not circuit:
+            continue
+
+        track_info = {
+            "track_id": circuit["id"],
+            "name": circuit["name"],
+            "type": circuit["type"],
+            "direction": circuit["direction"],
+            "length_km": circuit["length"],
+            "turns": circuit["turns"],
+            "laps": race.get("laps"),
+            "total_distance_km": race.get("distance"),
+            "country": circuit.get("countryId")
+        }
+        tracks.append(track_info)
+
+        # --- Car + Lap Time Info ---
+        results = [r for r in race_results if r["raceId"] == race["id"]]
+        for res in results:
+            engine = next((e for e in engines if e["engineManufacturerId"] == res["engineManufacturerId"]), None)
+            car_info = {
+                "car_id": f"{res['constructorId']}_{res['driverId']}_{race['year']}",
+                "constructor": res["constructorId"],
+                "driver": res["driverId"],
+                "engine": engine["name"] if engine else res["engineManufacturerId"],
+                "tyres": res["tyreManufacturerId"],
+                "race_id": race["id"],
+                "year": race["year"]
+            }
+            cars.append(car_info)
+
+            # --- Baseline Lap Time ---
+            fastest = next(
+                (f for f in fastest_laps if f["raceId"] == race["id"] and f["driverId"] == res["driverId"]),
+                None
+            )
+            if fastest and fastest.get("timeMillis"):
+                baselines.append({
+                    "race_id": race["id"],
+                    "track_id": circuit["id"],
+                    "car_id": car_info["car_id"],
+                    "baseline_lap_time_ms": fastest["timeMillis"]
+                })
+
+    return {
+        "tracks": tracks,
+        "cars": cars,
+        "baselines": baselines
+    }
+
 
 # Example usage
 with open("./data/circuits.json") as f:
@@ -67,7 +125,20 @@ with open("./data/pit-stops.json") as f:
 with open("./data/races.json") as f:
     race_metadata = json.load(f)
 
-track_configs = generate_track_config(circuits, qualifying_results, race_results, practice_results, pit_stops, race_metadata)
+with open("./data/fastest-laps.json") as f:
+    fastest_laps = json.load(f)
 
-with open("./data/track_configs.json", "w") as f:
-    json.dump(track_configs, f, indent=2)
+with open("./data/engines.json") as f:
+    engine_metadata = json.load(f)
+
+#track_configs = generate_track_config(circuits, qualifying_results, race_results, practice_results, pit_stops, race_metadata)
+track_configs = extract_configs(race_metadata, circuits, race_results, fastest_laps, engine_metadata)
+
+with open("./data/track_configs_2.json", "w") as f:
+    json.dump(track_configs["tracks"], f, indent=2)
+
+with open("./data/car_configs.json", "w") as f:
+    json.dump(track_configs["cars"], f, indent=2)
+
+with open("./data/baseline_configs.json", "w") as f:
+    json.dump(track_configs["baselines"], f, indent=2)
