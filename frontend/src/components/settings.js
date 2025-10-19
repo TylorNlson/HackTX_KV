@@ -41,17 +41,46 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
 
     console.log("Final settings to submit:", settings);
 
-    // TO DO back end call for summary data
-    // const data = await response.json();
-    const data = {winRate: 75, raceTime: 5400, dnfRate: 5}; // TO DO place holder data
-    setSummaryData(data);
+    try {
+      const response = await fetch("http://127.0.0.1:8000/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
 
-    // TO DO back end call for plot data
-    const plotData = {hist_data: [80, 82, 79, 81, 83, 78, 80, 82], line_data: {x: [1,2,3,4,5,6,7,8], y: [81,80.5,80.2,80.1,80.0,79.8,79.7,79.5]}}; // TO DO place holder data
-    setPlotData(plotData);
+      console.log("Simulation request successful:", response.status);
+  
+      // const data = await response.json();
 
-    const plotGalaxyData = {x: [1,2,3,4,5], y: [10,20,15,25,30], size: [5,10,15,20,25]}; // TO DO place holder data
-    setPlotGalaxyData(plotGalaxyData);
+      // console.log("Received simulation data:", data);
+  
+      // Depending on your backend, adjust these keys:
+      // Example expected: { winRate, raceTime, dnfRate, hist_data, line_data, galaxy_data }
+      // setSummaryData({
+      //   winRate: data.winRate,
+      //   raceTime: data.raceTime,
+      //   dnfRate: data.dnfRate,
+      // });
+  
+      // if (data.hist_data && data.line_data) {
+      //   setPlotData({
+      //     hist_data: data.hist_data,
+      //     line_data: data.line_data,
+      //   });
+      // }
+  
+      // if (data.galaxy_data) {
+      //   setPlotGalaxyData(data.galaxy_data);
+      // }
+  
+    } catch (error) {
+      console.error("Simulation request failed:", error);
+      alert("Failed to fetch simulation results. Check backend connection.");
+    }
   }
 
   return (
