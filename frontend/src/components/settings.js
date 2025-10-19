@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./settings.css";
 
-function Settings() {
+function Settings({setSummaryData, setPlotData}) {
   const [settings, setSettings] = useState({
     track: "",
     trackTemp: "",
@@ -33,7 +33,26 @@ function Settings() {
   }
 
   const submitSettings = async () => {
+    const hasEmptyField = Object.values(settings).some(value => value === "");
+    if (hasEmptyField) {
+      alert("Please fill in all fields before submitting.");
+      const data = null;
+      setSummaryData(data);
+      const plotData = null;
+      setPlotData(plotData);
+      return;
+    }
+
     console.log("Final settings to submit:", settings);
+
+    // TO DO back end call for summary data
+    // const data = await response.json();
+    const data = {winRate: 75, raceTime: 5400, dnfRate: 5}; // TO DO place holder data
+    setSummaryData(data);
+
+    // TO DO back end call for plot data
+    const plotData = {hist_data: [80, 82, 79, 81, 83, 78, 80, 82], line_data: {x: [1,2,3,4,5,6,7,8], y: [81,80.5,80.2,80.1,80.0,79.8,79.7,79.5]}}; // TO DO place holder data
+    setPlotData(plotData);
   }
 
   return (
@@ -70,20 +89,20 @@ function Settings() {
         </div>
         <div className="car-setup">
           <div className="settings-subtitle">Car Setup</div>
-          <label htmlFor="downforce">Downforce Level</label>
-          <input type="range" id="downforce" name="downforce" min="1" max="10" onChange={handleChange}/>
+          <label htmlFor="downforce">Downforce Level:</label>
+          <input type="number" id="downforce" name="downforce" min="1" max="10" onChange={handleChange}/>
           <br />
-          <label htmlFor="engineMode">Engine Power Mode</label>
+          <label htmlFor="engineMode">Engine Power Mode:</label>
           <select id="engineMode" name="engineMode" onChange={handleChange}>
             <option value="eco">Eco</option>
             <option value="normal">Normal</option>
             <option value="aggressive">Aggressive</option>
           </select>
           <br />
-          <label htmlFor="fuelLoad">Fuel Load (liters)</label>
+          <label htmlFor="fuelLoad">Fuel Load (liters):</label>
           <input type="number" id="fuelLoad" name="fuelLoad" min="10" max="110" onChange={handleChange}/>
           <br />
-          <label htmlFor="tireCompound">Tire Compound</label>
+          <label htmlFor="tireCompound">Tire Compound:</label>
           <select id="tireCompound" name="tireCompound" onChange={handleChange}>
             <option value="soft">Soft</option>
             <option value="medium">Medium</option>
@@ -95,33 +114,33 @@ function Settings() {
           <label htmlFor="raceLength">Race Length (laps)</label>
           <input type="number" id="raceLength" name="raceLength" min="1" max="100" onChange={handleChange}/>
           <br />
-          <label htmlFor="tireCondition">Initial Tire Condition</label>
+          <label htmlFor="tireCondition">Initial Tire Condition:</label>
           <select id="tireCondition" name="tireCondition" onChange={handleChange}>
             <option value="fresh">Fresh</option>
             <option value="worn">Partially Worn</option>
           </select>
           <br />
-          <label htmlFor="safetyCarChance">Expected Safety Car Chance (%)</label>
+          <label htmlFor="safetyCarChance">Expected Safety Car Chance (%):</label>
           <input type="number" id="safetyCarChance" name="safetyCarChance" min="0" max="100" onChange={handleChange}/>
-          <label htmlFor="competitorSpread">Competitor Performance Spread</label>
-          <input type="range" id="competitorSpread" name="competitorSpread" min="0" max="10" onChange={handleChange}/>
+          <label htmlFor="competitorSpread">Competitor Performance Spread:</label>
+          <input type="number" id="competitorSpread" name="competitorSpread" min="0" max="10" onChange={handleChange}/>
         </div>
         <div className="strategy">
           <div className="settings-subtitle">Strategy</div>
-          <label htmlFor="pitStopMin">Pit Stop Window (Min Lap)</label>
+          <label htmlFor="pitStopMin">Pit Stop Window (Min Lap):</label>
           <input type="number" id="pitStopMin" name="pitStopMin" min="1" onChange={handleChange}/>
           <br />
-          <label htmlFor="pitStopMax">Pit Stop Window (Max Lap)</label>
+          <label htmlFor="pitStopMax">Pit Stop Window (Max Lap):</label>
           <input type="number" id="pitStopMax" name="pitStopMax" min="1" onChange={handleChange}/>
           <br />
-          <label htmlFor="riskTolerance">Risk Tolerance</label>
+          <label htmlFor="riskTolerance">Risk Tolerance:</label>
           <select id="riskTolerance" name="riskTolerance" onChange={handleChange}>
             <option value="conservative">Conservative</option>
             <option value="balanced">Balanced</option>
             <option value="aggressive">Aggressive</option>
           </select>
           <br />
-          <label htmlFor="targetFinish">Target Finish Position</label>
+          <label htmlFor="targetFinish">Target Finish Position:</label>
           <select id="targetFinish" name="targetFinish" onChange={handleChange}>
             <option value="p1">P1</option>
             <option value="top3">Top 3</option>
