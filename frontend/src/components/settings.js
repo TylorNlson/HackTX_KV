@@ -12,13 +12,6 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
     drag: 1.2,
     reliability: 90,
     mileage: 1000,
-    front_wing_angle: 5,
-    rear_wing_angle: 5,
-    air_roll_balance: 0,
-    front_spring_rate: 150,
-    rear_spring_rate: 150,
-    tire_preasure_front: 22,
-    tire_preasure_back: 21,
     runs: 5000
   });
 
@@ -147,33 +140,6 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
           <br />
           <label htmlFor="mileage">Mileage:</label>
           <input type="number" id="mileage" value={settings.mileage} onChange={handleChange}/>
-          <br />
-          <label htmlFor="front_wing_angle">Front Wing Angle:</label>
-          <input type="number" id="front_wing_angle" value={settings.front_wing_angle} onChange={handleChange} />
-          <br />
-          <label htmlFor="rear_wing_angle">Rear Wing Angle:</label>
-          <input type="number" id="rear_wing_angle" value={settings.rear_wing_angle} onChange={handleChange} />
-          <br />
-          <label htmlFor="air_roll_balance">Air Roll Balance:</label>
-          <input type="number" id="air_roll_balance" value={settings.air_roll_balance} onChange={handleChange} />
-          <br />
-          <label htmlFor="front_spring_rate">Front Spring Rate:</label>
-          <input type="number" id="front_spring_rate" value={settings.front_spring_rate} onChange={handleChange} />
-          <br />
-          <label htmlFor="rear_spring_rate">Rear Spring Rate:</label>
-          <input type="number" id="rear_spring_rate" value={settings.rear_spring_rate} onChange={handleChange} />
-          <br />
-          <label htmlFor="tire_preasure_front">Tire Pressure (Front):</label>
-          <input type="number" id="tire_preasure_front" value={settings.tire_preasure_front} onChange={handleChange} />
-          <br />
-          <label htmlFor="tire_preasure_back">Tire Pressure (Back):</label>
-          <input type="number" id="tire_preasure_back" value={settings.tire_preasure_back} onChange={handleChange} />
-          <br />
-        </div>
-        <div className="race-conditions">
-          <div className="settings-subtitle">Race Conditions</div>
-          <label htmlFor="runs">Runs:</label>
-          <input type="number" id="runs" value={settings.runs} onChange={handleChange} />
           <br />
           <button onClick={submitSettings}> Apply Settings </button>
         </div>
