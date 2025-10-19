@@ -9,6 +9,13 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
 from enum import Enum
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from dataclasses import asdict
+from typing import List, Tuple
+
+
+
 
 # ============================================================================
 # CONFIGURATION CLASSES
@@ -142,6 +149,8 @@ class CarEngineering:
         straight_fraction = 1.0 - corner_fraction
         straight_delta = (1.0 - straight_multiplier) * track.base_lap_time * straight_fraction * 0.4
         delta += corner_delta + straight_delta
+        # ↓ NEW: cap total delta to ±0.4 s/lap realistic range
+        delta = np.clip(delta, -0.4, 0.4)
         return delta
 
     def get_fuel_consumption_rate(self, engine_mode: EngineMode, track_fuel_factor: float = 1.0) -> float:
@@ -157,7 +166,7 @@ class CarEngineering:
         gearbox_risk = np.exp(2.5 * gearbox_wear) - 1.0
         component_risk = (pu_risk * 0.6 + gearbox_risk * 0.4) / self.reliability_factor
         race_length_factor = race_laps / 60.0
-        total_dnf_prob = base_dnf_prob * (1.0 + component_risk) * race_length_factor
+        total_dnf_prob = base_dnf_prob * (1.3 + component_risk) * race_length_factor
         return min(total_dnf_prob, 0.50)
 
 @dataclass
@@ -370,9 +379,9 @@ class SimulationConfig:
         TireCompound.WET:   (5.0, 0.015, 8.0),
     })
 
-    lap_time_noise_std: float = 0.15
-    wear_rate_noise_std: float = 0.20
-    fuel_burn_noise_std: float = 0.05
+    lap_time_noise_std = 0.35  # was 0.15
+    wear_rate_noise_std = 0.25
+    fuel_burn_noise_std = 0.08
     base_fuel_burn_rate: float = 1.3
     base_puncture_prob: float = 0.0003
     puncture_wear_multiplier: float = 5.0
@@ -449,9 +458,9 @@ F1_CAR_PRESETS = {
     "ferrari_sf24": create_custom_car(
         name="Ferrari SF-24",
         mass_kg=798.0,
-        max_power_kw=770.0,
-        downforce_coeff=3.6,
-        drag_coeff=0.84,
+        max_power_kw=740.0,
+        downforce_coeff=3.4,
+        drag_coeff=0.86,
         reliability=0.95,
     ),
     "mercedes_w15": create_custom_car(
@@ -490,10 +499,10 @@ class CompetitorField:
         midfield = min(8, n - top_teams)
         backmarkers = n - top_teams - midfield
         pace = np.zeros(n)
-        pace[:top_teams] = self.rng.uniform(-0.8, -0.2, top_teams)
-        pace[top_teams:top_teams + midfield] = self.rng.uniform(-0.2, 0.8, midfield)
+        pace[:top_teams] = self.rng.uniform(-0.3, 0.4, top_teams)
+        pace[top_teams:top_teams + midfield] = self.rng.uniform(0.3, 1.3, midfield)
         if backmarkers > 0:
-            pace[top_teams + midfield:] = self.rng.uniform(0.8, 2.0, backmarkers)
+            pace[top_teams + midfield:] = self.rng.uniform(1.2, 2.5, backmarkers)
         pace += self.rng.normal(0, 0.1, n)
         return pace
 
@@ -542,6 +551,10 @@ class CompetitorField:
 # RACE SIMULATOR (same as before)
 # ============================================================================
 
+# ============================================================================
+# RACE SIMULATOR - FIXED VERSION
+# ============================================================================
+
 class RaceSimulator:
     def __init__(self, race_conditions: RaceConditions, car_setup: CarSetup, sim_config: SimulationConfig):
         self.rc = race_conditions
@@ -554,11 +567,14 @@ class RaceSimulator:
         self.our_car_performance_offset = self.setup.get_performance_offset(race_conditions.track)
 
         print(f"\n🏎️  Our Car Engineering:")
-        print(f"   Mass: {self.setup.engineering.car_mass_kg:.1f} kg (+ {self.setup.engineering.driver_mass_kg:.1f} kg driver)")
-        print(f"   Power: {self.setup.engineering.max_power_kw:.0f} kW ({self.setup.engineering.max_power_kw*1.34:.0f} HP)")
+        print(
+            f"   Mass: {self.setup.engineering.car_mass_kg:.1f} kg (+ {self.setup.engineering.driver_mass_kg:.1f} kg driver)")
+        print(
+            f"   Power: {self.setup.engineering.max_power_kw:.0f} kW ({self.setup.engineering.max_power_kw * 1.34:.0f} HP)")
         print(f"   Downforce CL: {self.setup.engineering.downforce_coefficient:.2f}")
         print(f"   Drag CD: {self.setup.engineering.drag_coefficient:.2f}")
-        print(f"   L/D Ratio: {self.setup.engineering.downforce_coefficient/self.setup.engineering.drag_coefficient:.2f}")
+        print(
+            f"   L/D Ratio: {self.setup.engineering.downforce_coefficient / self.setup.engineering.drag_coefficient:.2f}")
         print(f"   Performance offset: {self.our_car_performance_offset:+.3f}s per lap")
         print(f"\n👥 Competitor Field:")
         print(f"   {self.rc.num_competitors} competitors")
@@ -597,62 +613,108 @@ class RaceSimulator:
         positions = self._compute_positions_stochastic(total_times, dnf_flags, competitor_times_all_runs)
 
         return SimulationResults(strategy, self.N_runs, lap_times, tire_wear, fuel_level,
-                                total_times, positions, dnf_flags, self.rc, self.cfg)
+                                 total_times, positions, dnf_flags, self.rc, self.cfg)
 
     def _simulate_competitor_field_stochastic(self) -> np.ndarray:
+        """
+        FIXED: Properly simulate competitor field with correct DNF logic and variance
+        """
         competitor_times = np.zeros((self.N_runs, self.rc.num_competitors))
+
         for comp_idx in range(self.rc.num_competitors):
             base_pace = self.competitor_field.competitor_base_pace[comp_idx]
             strategy = self.competitor_field.competitor_strategies[comp_idx]
+
+            # Competitor uses random fuel load
             competitor_fuel = self.rng.uniform(105.0, 109.0)
+
+            # Calculate expected race time
             expected_time = self._calculate_expected_race_time(base_pace, strategy, competitor_fuel)
 
+            # DNF probability for this competitor (based on their pace/reliability)
+            # Better teams (negative base_pace) have lower DNF rates
+            base_dnf_prob = 0.03
+            pace_dnf_modifier = max(0, base_pace / 2.0)  # Slower cars more likely to DNF
+            comp_dnf_prob = base_dnf_prob * (1.0 + pace_dnf_modifier)
+
             for run_idx in range(self.N_runs):
-                if self.rng.random() < 0.03:
+                # FIX: Check DNF per competitor per run (not global!)
+                if self.rng.random() < comp_dnf_prob:
                     competitor_times[run_idx, comp_idx] = 1e9
                     continue
+
+                # Variance components (same as before)
                 lap_variance_total = self.cfg.lap_time_noise_std * np.sqrt(self.rc.race_laps)
                 pit_variance = 0.5 * len(strategy.pit_laps)
                 random_events = self.rng.normal(0, 2.0)
-                total_std = np.sqrt(lap_variance_total ** 2 + pit_variance ** 2 + 4.0)
+
+                # FIX: Increase total variance to allow more competitive spread
+                total_std = np.sqrt(lap_variance_total ** 2 + pit_variance ** 2 + 16.0)  # ← Changed from 4.0
+
                 run_variance = self.rng.normal(0, total_std)
                 race_time = expected_time + run_variance + random_events
-                if self.rng.random() < 0.05:
-                    race_time += self.rng.normal(0, total_std * 2)
-                competitor_times[run_idx, comp_idx] = max(race_time, expected_time * 0.92)
+
+                # Outliers
+                if self.rng.random() < 0.08:  # ← Increased from 0.05 for more chaos
+                    race_time += self.rng.normal(0, total_std * 1.5)
+
+                competitor_times[run_idx, comp_idx] = max(race_time, expected_time * 0.88)  # ← Loosened from 0.92
+
         return competitor_times
 
     def _calculate_expected_race_time(self, base_pace: float, strategy: Strategy, starting_fuel: float = None) -> float:
+        """
+        Calculate expected race time - same physics for everyone
+        """
         if starting_fuel is None:
             starting_fuel = 107.0
+
         total_time = 0.0
         stint_laps = []
         prev_pit = 0
         for pit_lap in strategy.pit_laps + [self.rc.race_laps]:
             stint_laps.append(pit_lap - prev_pit)
             prev_pit = pit_lap
+
         current_lap = 0
         fuel = starting_fuel
+
         for stint_idx, stint_length in enumerate(stint_laps):
             compound = strategy.tire_compounds[stint_idx]
             compound_offset, base_wear_rate, _ = self.cfg.tire_properties[compound]
+
             for lap_in_stint in range(stint_length):
+                # Base lap time WITH competitor's pace offset
                 lap_time = self.rc.track.base_lap_time + base_pace
+
+                # Tire degradation
                 tire_wear = (lap_in_stint / max(stint_length, 1)) * base_wear_rate * stint_length
                 tire_deg = self.cfg.k_wear_lap_time * (tire_wear ** 1.5)
+
+                # Fuel effect
                 fuel_effect = self.cfg.k_fuel_lap_time * fuel
+
+                # Compound offset
                 lap_time += compound_offset + tire_deg + fuel_effect
+
                 total_time += lap_time
                 current_lap += 1
+
+                # Burn fuel
                 burn_rate = self.cfg.base_fuel_burn_rate * self.rc.track.fuel_usage
                 fuel = max(fuel - burn_rate, 0.0)
+
+            # Pit stop
             if stint_idx < len(strategy.pit_laps):
                 total_time += self.rc.track.pit_loss_time
+
         return total_time
 
     def _compute_positions_stochastic(self, our_times: np.ndarray, our_dnf_flags: np.ndarray,
-                                     competitor_times: np.ndarray) -> np.ndarray:
+                                      competitor_times: np.ndarray) -> np.ndarray:
+        """Compute finishing positions"""
         positions = np.zeros(len(our_times), dtype=int)
+
         for run_idx in range(self.N_runs):
             if our_dnf_flags[run_idx]:
                 finished_competitors = np.sum(competitor_times[run_idx] < 1e8)
@@ -661,13 +723,17 @@ class RaceSimulator:
                 our_time = our_times[run_idx]
                 faster_count = np.sum(competitor_times[run_idx] < our_time)
                 positions[run_idx] = faster_count + 1
+
         return positions
 
     def _simulate_single_run(self, strategy: Strategy, run_idx: int, wear_mult: float,
-                            fuel_mult: float, lap_noise: np.ndarray, safety_cars: np.ndarray) -> Dict:
+                             fuel_mult: float, lap_noise: np.ndarray, safety_cars: np.ndarray) -> Dict:
+        """Simulate single race for our car"""
         W = self.setup.initial_tire_wear
         fuel = strategy.starting_fuel
         total_time = 0.0
+
+        # DNF check for our car (using engineering reliability model)
         dnf_prob = self.setup.engineering.get_reliability_dnf_probability(self.N_laps)
         dnf = self.rng.random() < dnf_prob
 
@@ -704,7 +770,8 @@ class RaceSimulator:
             total_time += lap_time
             wear_rate = self._compute_wear_rate(current_compound) * wear_mult
             W = min(W + wear_rate, 1.0)
-            burn_rate = self.setup.engineering.get_fuel_consumption_rate(current_engine_mode, self.rc.track.fuel_usage) * fuel_mult
+            burn_rate = self.setup.engineering.get_fuel_consumption_rate(current_engine_mode,
+                                                                         self.rc.track.fuel_usage) * fuel_mult
             fuel = max(fuel - burn_rate, 0.0)
 
             if fuel <= 0.0 and lap < self.N_laps - 1:
@@ -719,7 +786,8 @@ class RaceSimulator:
                 'total_time': total_time if not dnf else 1e9, 'dnf': dnf}
 
     def _compute_lap_time(self, wear: float, fuel: float, compound: TireCompound,
-                         engine_mode: EngineMode, noise: float) -> float:
+                          engine_mode: EngineMode, noise: float) -> float:
+        """Compute single lap time for our car"""
         tau_0 = self.rc.track.base_lap_time + self.our_car_performance_offset
         tau_wear = self.cfg.k_wear_lap_time * (wear ** 1.5)
         tau_fuel = self.cfg.k_fuel_lap_time * fuel
@@ -730,6 +798,7 @@ class RaceSimulator:
         return max(tau, tau_0 * 0.90)
 
     def _compute_wear_rate(self, compound: TireCompound) -> float:
+        """Tire wear rate"""
         _, base_wear, _ = self.cfg.tire_properties[compound]
         wear = base_wear * self.rc.track.tire_stress
         temp_factor = 1.0 + 0.015 * (self.rc.track_temp - 25)
@@ -854,6 +923,59 @@ class StrategyOptimizer:
                   f"Pod: {stats['podium_probability']*100:5.1f}% | Avg: P{stats['mean_position']:.1f}")
         return results
 
+
+
+def to_serializable(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.generic):  # e.g., np.float64
+        return obj.item()
+    elif isinstance(obj, dict):
+        return {k: to_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_serializable(x) for x in obj]
+    else:
+        return obj
+
+def serialize_strategy(strategy):
+    d = asdict(strategy)
+    # Convert enums to strings if needed
+    d['tire_compounds'] = [str(tc) for tc in d['tire_compounds']]
+    d['engine_modes'] = [str(em) for em in d['engine_modes']]
+    return d
+
+def serialize_sim_results(sim_result: SimulationResults):
+    stats = sim_result.get_statistics()  # get all the calculated stats
+
+    def to_serializable(obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, np.generic):  # e.g., np.float64
+            return obj.item()
+        elif hasattr(obj, "__dict__"):
+            # For nested objects like RaceConditions or SimulationConfig
+            return {k: to_serializable(v) for k, v in vars(obj).items()}
+        elif isinstance(obj, dict):
+            return {k: to_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [to_serializable(v) for v in obj]
+        else:
+            return obj
+
+    clean_stats = to_serializable(stats)
+    return clean_stats
+
+def serialize_results(results: list[tuple[Strategy, SimulationResults, float]]):
+    serialized = []
+    for strategy, sim_result, score in results:
+        serialized.append([
+            serialize_strategy(strategy),  # as before
+            serialize_sim_results(sim_result),
+            score
+        ])
+    return serialized
+
+
 # ============================================================================
 # MAIN - UPDATED FOR NEW TRACK DATABASE
 # ============================================================================
@@ -958,7 +1080,12 @@ def main():
     print(f"Best Strategy: {results[0][0].name}")
     print(f"Expected Result: P{best_stats['mean_position']:.1f} (Win: {best_stats['win_probability']*100:.1f}%)")
 
-    return results
+    print("Type of result:", type(results))
+    print("Example content:", str(results)[:500])
+
+    clean_results = serialize_results(results)
+    return JSONResponse(content=clean_results)
+
 
 if __name__ == "__main__":
     results = main()
