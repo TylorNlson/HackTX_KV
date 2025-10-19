@@ -2,34 +2,30 @@ import { useState } from "react";
 import "./settings.css";
 
 function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
+  // Sensible defaults so user can click Apply immediately
   const [settings, setSettings] = useState({
-    track_id: "",
-    driver_mass: "",
-    car_mass: "",
-    max_power: "",
-    downforce: "",
-    drag: "",
-    reliability: "",
-    mileage: "",
-    front_wing_angle: "",
-    rear_wing_angle: "",
-    air_roll_balance: "",
-    front_spring_rate: "",
-    rear_spring_rate: "",
-    tire_preasure_front: "",
-    tire_preasure_back: "",
+    track_id: "monaco",
+    driver_mass: 75,
+    car_mass: 798,
+    max_power: 900,
+    downforce: 5,
+    drag: 1.2,
+    reliability: 90,
+    mileage: 1000,
+    front_wing_angle: 5,
+    rear_wing_angle: 5,
+    air_roll_balance: 0,
+    front_spring_rate: 150,
+    rear_spring_rate: 150,
+    tire_preasure_front: 22,
+    tire_preasure_back: 21,
     runs: 5000
   });
 
   const handleChange = (e) => {
-    e.preventDefault();
-    setSettings({
-      ...settings,
-      [e.target.id]: e.target.value
-    });
-    console.log("Settings submitted:", {
-      [e.target.id]: e.target.value
-    });
+    const { id, value, type } = e.target;
+    const nextValue = type === "number" ? (value === "" ? "" : Number(value)) : value;
+    setSettings((prev) => ({ ...prev, [id]: nextValue }));
   }
 
   const submitSettings = async () => {
@@ -94,8 +90,8 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
         <hr/>
         <div className="env-settings">
           <div className="settings-subtitle">Environment Settings</div>
-          <label htmlFor="track">Track Selection:</label>
-          <select id="track_id" onChange={handleChange}>
+          <label htmlFor="track_id">Track Selection:</label>
+          <select id="track_id" value={settings.track_id} onChange={handleChange}>
             <option value="monaco">Monaco</option>
             <option value="monza">Monza</option>
             <option value="spa">Spa</option>
@@ -103,54 +99,54 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
           </select>
           <br />
           <label htmlFor="driver_mass">Driver Mass:</label>
-          <input id="driver_mass" type="number" onChange={handleChange} />
+          <input id="driver_mass" type="number" value={settings.driver_mass} onChange={handleChange} />
         </div>
         <div className="car-setup">
           <div className="settings-subtitle">Car Setup</div>
           <label htmlFor="car_mass">Car Mass:</label>
-          <input id="car_mass" type="number" onChange={handleChange} />
+          <input id="car_mass" type="number" value={settings.car_mass} onChange={handleChange} />
           <br />
           <label htmlFor="max_power">Max Power:</label>
-          <input id="max_power" type="number" onChange={handleChange} />
+          <input id="max_power" type="number" value={settings.max_power} onChange={handleChange} />
           <br />
           <label htmlFor="downforce">Downforce Level:</label>
-          <input type="number" id="downforce" name="downforce" onChange={handleChange}/>
+          <input type="number" id="downforce" name="downforce" value={settings.downforce} onChange={handleChange}/>
           <br />
           <label htmlFor="drag">Drag:</label>
-          <input type="number" id="drag" onChange={handleChange}/>
+          <input type="number" id="drag" value={settings.drag} onChange={handleChange}/>
           <br />
           <label htmlFor="reliability">Reliability:</label>
-          <input type="number" id="reliability" onChange={handleChange}/>
+          <input type="number" id="reliability" value={settings.reliability} onChange={handleChange}/>
           <br />
           <label htmlFor="mileage">Mileage:</label>
-          <input type="number" id="mileage" onChange={handleChange}/>
+          <input type="number" id="mileage" value={settings.mileage} onChange={handleChange}/>
           <br />
           <label htmlFor="front_wing_angle">Front Wing Angle:</label>
-          <input type="number" id="front_wing_angle" onChange={handleChange} />
+          <input type="number" id="front_wing_angle" value={settings.front_wing_angle} onChange={handleChange} />
           <br />
           <label htmlFor="rear_wing_angle">Rear Wing Angle:</label>
-          <input type="number" id="rear_wing_angle" onChange={handleChange} />
+          <input type="number" id="rear_wing_angle" value={settings.rear_wing_angle} onChange={handleChange} />
           <br />
           <label htmlFor="air_roll_balance">Air Roll Balance:</label>
-          <input type="number" id="air_roll_balance" onChange={handleChange} />
+          <input type="number" id="air_roll_balance" value={settings.air_roll_balance} onChange={handleChange} />
           <br />
           <label htmlFor="front_spring_rate">Front Spring Rate:</label>
-          <input type="number" id="front_spring_rate" onChange={handleChange} />
+          <input type="number" id="front_spring_rate" value={settings.front_spring_rate} onChange={handleChange} />
           <br />
           <label htmlFor="rear_spring_rate">Rear Spring Rate:</label>
-          <input type="number" id="rear_spring_rate" onChange={handleChange} />
+          <input type="number" id="rear_spring_rate" value={settings.rear_spring_rate} onChange={handleChange} />
           <br />
           <label htmlFor="tire_preasure_front">Tire Pressure (Front):</label>
-          <input type="number" id="tire_preasure_front" onChange={handleChange} />
+          <input type="number" id="tire_preasure_front" value={settings.tire_preasure_front} onChange={handleChange} />
           <br />
           <label htmlFor="tire_preasure_back">Tire Pressure (Back):</label>
-          <input type="number" id="tire_preasure_back" onChange={handleChange} />
+          <input type="number" id="tire_preasure_back" value={settings.tire_preasure_back} onChange={handleChange} />
           <br />
         </div>
         <div className="race-conditions">
           <div className="settings-subtitle">Race Conditions</div>
           <label htmlFor="runs">Runs:</label>
-          <input type="number" id="runs" defaultValue={5000} onChange={handleChange} />
+          <input type="number" id="runs" value={settings.runs} onChange={handleChange} />
           <br />
           <button onClick={submitSettings}> Apply Settings </button>
         </div>

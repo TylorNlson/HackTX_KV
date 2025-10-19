@@ -8,10 +8,14 @@
     width: 100%;
     min-width: 0;
     height: 100%;
+    max-height: 100%;           /* prevent overflow */
     display: flex;
     flex-direction: column; /* stack children vertically */
     padding: 20px;
-    gap: 1rem;    
+    gap: 1rem;
+    box-sizing: border-box;
+    overflow-y: auto;           /* scroll if content overflows */
+    overflow-x: hidden;
 
     /* font style */
     font-size: 1.2rem;
