@@ -2,34 +2,23 @@ import { useState } from "react";
 import "./settings.css";
 
 function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
+  // Sensible defaults so user can click Apply immediately
   const [settings, setSettings] = useState({
-    track_id: "",
-    driver_mass: "",
-    car_mass: "",
-    max_power: "",
-    downforce: "",
-    drag: "",
-    reliability: "",
-    mileage: "",
-    front_wing_angle: "",
-    rear_wing_angle: "",
-    air_roll_balance: "",
-    front_spring_rate: "",
-    rear_spring_rate: "",
-    tire_preasure_front: "",
-    tire_preasure_back: "",
+    track_id: "monaco",
+    driver_mass: 75,
+    car_mass: 798,
+    max_power: 900,
+    downforce: 5,
+    drag: 1.2,
+    reliability: 90,
+    mileage: 1000,
     runs: 5000
   });
 
   const handleChange = (e) => {
-    e.preventDefault();
-    setSettings({
-      ...settings,
-      [e.target.id]: e.target.value
-    });
-    console.log("Settings submitted:", {
-      [e.target.id]: e.target.value
-    });
+    const { id, value, type } = e.target;
+    const nextValue = type === "number" ? (value === "" ? "" : Number(value)) : value;
+    setSettings((prev) => ({ ...prev, [id]: nextValue }));
   }
 
   const submitSettings = async () => {
@@ -45,17 +34,73 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
 
     console.log("Final settings to submit:", settings);
 
-    // TO DO back end call for summary data
-    // const data = await response.json();
-    const data = {winRate: 75, raceTime: 5400, dnfRate: 5}; // TO DO place holder data
-    setSummaryData(data);
+    try {
+      const response = await fetch("http://127.0.0.1:8000/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
 
-    // TO DO back end call for plot data
-    const plotData = {hist_data: [80, 82, 79, 81, 83, 78, 80, 82], line_data: {x: [1,2,3,4,5,6,7,8], y: [81,80.5,80.2,80.1,80.0,79.8,79.7,79.5]}}; // TO DO place holder data
-    setPlotData(plotData);
+      console.log("Simulation request successful:", response.status);
+  
+      const data = await response.json();
 
-    const plotGalaxyData = {x: [1,2,3,4,5], y: [10,20,15,25,30], size: [5,10,15,20,25]}; // TO DO place holder data
-    setPlotGalaxyData(plotGalaxyData);
+      console.log("Received simulation data:", data);
+  
+      // Depending on your backend, adjust these keys:
+      // Example expected: { winRate, raceTime, dnfRate, hist_data, line_data, galaxy_data }
+      setSummaryData({
+        winRate: data.winRate,
+        raceTime: data.raceTime,
+        dnfRate: data.dnfRate,
+      });
+  
+      if (data.hist_data && data.line_data) {
+        setPlotData({
+          hist_data: data.hist_data,
+          line_data: data.line_data,
+        });
+      }
+  
+      if (data.galaxy_data) {
+        setPlotGalaxyData(data.galaxy_data);
+      }
+  
+    } catch (error) {
+      console.error("Simulation request failed:", error);
+      console.log("Using mock data since backend is not available");
+      
+      // Generate mock data for demonstration
+      const mockHistData = Array.from({length: 50}, (_, i) => 85 + Math.random() * 10);
+      const mockLineData = Array.from({length: 20}, (_, i) => ({
+        lap: i + 1,
+        time: 88 + Math.random() * 3
+      }));
+      const mockGalaxyData = Array.from({length: 100}, () => ({
+        x: Math.random() * 10 - 5,
+        y: Math.random() * 10 - 5,
+        z: Math.random() * 10 - 5,
+        color: Math.random(),
+        size: Math.random() * 5 + 2
+      }));
+      
+      setSummaryData({
+        winRate: (Math.random() * 30 + 10).toFixed(1) + "%",
+        raceTime: (85 + Math.random() * 5).toFixed(2) + "s",
+        dnfRate: (Math.random() * 5).toFixed(1) + "%",
+      });
+      
+      setPlotData({
+        hist_data: mockHistData,
+        line_data: mockLineData,
+      });
+      
+      setPlotGalaxyData(mockGalaxyData);
+    }
   }
 
   return (
@@ -65,8 +110,8 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
         <hr/>
         <div className="env-settings">
           <div className="settings-subtitle">Environment Settings</div>
-          <label htmlFor="track">Track Selection:</label>
-          <select id="track_id" onChange={handleChange}>
+          <label htmlFor="track_id">Track Selection:</label>
+          <select id="track_id" value={settings.track_id} onChange={handleChange}>
             <option value="monaco">Monaco</option>
             <option value="monza">Monza</option>
             <option value="spa">Spa</option>
@@ -74,54 +119,27 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
           </select>
           <br />
           <label htmlFor="driver_mass">Driver Mass:</label>
-          <input id="driver_mass" type="number" onChange={handleChange} />
+          <input id="driver_mass" type="number" value={settings.driver_mass} onChange={handleChange} />
         </div>
         <div className="car-setup">
           <div className="settings-subtitle">Car Setup</div>
           <label htmlFor="car_mass">Car Mass:</label>
-          <input id="car_mass" type="number" onChange={handleChange} />
+          <input id="car_mass" type="number" value={settings.car_mass} onChange={handleChange} />
           <br />
           <label htmlFor="max_power">Max Power:</label>
-          <input id="max_power" type="number" onChange={handleChange} />
+          <input id="max_power" type="number" value={settings.max_power} onChange={handleChange} />
           <br />
           <label htmlFor="downforce">Downforce Level:</label>
-          <input type="number" id="downforce" name="downforce" onChange={handleChange}/>
+          <input type="number" id="downforce" name="downforce" value={settings.downforce} onChange={handleChange}/>
           <br />
           <label htmlFor="drag">Drag:</label>
-          <input type="number" id="drag" onChange={handleChange}/>
+          <input type="number" id="drag" value={settings.drag} onChange={handleChange}/>
           <br />
           <label htmlFor="reliability">Reliability:</label>
-          <input type="number" id="reliability" onChange={handleChange}/>
+          <input type="number" id="reliability" value={settings.reliability} onChange={handleChange}/>
           <br />
           <label htmlFor="mileage">Mileage:</label>
-          <input type="number" id="mileage" onChange={handleChange}/>
-          <br />
-          <label htmlFor="front_wing_angle">Front Wing Angle:</label>
-          <input type="number" id="front_wing_angle" onChange={handleChange} />
-          <br />
-          <label htmlFor="rear_wing_angle">Rear Wing Angle:</label>
-          <input type="number" id="rear_wing_angle" onChange={handleChange} />
-          <br />
-          <label htmlFor="air_roll_balance">Air Roll Balance:</label>
-          <input type="number" id="air_roll_balance" onChange={handleChange} />
-          <br />
-          <label htmlFor="front_spring_rate">Front Spring Rate:</label>
-          <input type="number" id="front_spring_rate" onChange={handleChange} />
-          <br />
-          <label htmlFor="rear_spring_rate">Rear Spring Rate:</label>
-          <input type="number" id="rear_spring_rate" onChange={handleChange} />
-          <br />
-          <label htmlFor="tire_preasure_front">Tire Pressure (Front):</label>
-          <input type="number" id="tire_preasure_front" onChange={handleChange} />
-          <br />
-          <label htmlFor="tire_preasure_back">Tire Pressure (Back):</label>
-          <input type="number" id="tire_preasure_back" onChange={handleChange} />
-          <br />
-        </div>
-        <div className="race-conditions">
-          <div className="settings-subtitle">Race Conditions</div>
-          <label htmlFor="runs">Runs:</label>
-          <input type="number" id="runs" defaultValue={5000} onChange={handleChange} />
+          <input type="number" id="mileage" value={settings.mileage} onChange={handleChange}/>
           <br />
           <button onClick={submitSettings}> Apply Settings </button>
         </div>

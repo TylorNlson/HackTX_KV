@@ -3,6 +3,7 @@
     background-color: #011025;   /* navy blue */
     border-radius: 15px;         /* rounded corners */
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.5); /* subtle glow */
+    border: 2px solid rgba(255, 255, 255, 0.1); /* subtle border for separation */
 
     /* size and layout */
     width: 100%;
@@ -10,6 +11,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
 
     /* font style */
     font-size: 1.2rem;
