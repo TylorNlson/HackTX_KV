@@ -26,23 +26,23 @@ class SimInput(BaseModel):
 
 @app.post("/simulate")
 def simulate(data: SimInput):
-    result = F1_Simulation.main(
-        data.track_id,
-        data.driver_mass,
-        data.car_mass,
-        data.max_power,
-        data.downforce,
-        data.drag,
-        data.reliability,
-        data.mileage,
-        data.front_wing_angle,
-        data.rear_wing_angle,
-        data.air_roll_balance,
-        data.front_spring_rate,
-        data.rear_spring_rate,
-        data.tire_preasure_front,
-        data.tire_preasure_back,
-        data.runs)
+    result = F1_Simulation.main()
+        # data.track_id,
+        # data.driver_mass,
+        # data.car_mass,
+        # data.max_power,
+        # data.downforce,
+        # data.drag,
+        # data.reliability,
+        # data.mileage,
+        # data.front_wing_angle,
+        # data.rear_wing_angle,
+        # data.air_roll_balance,
+        # data.front_spring_rate,
+        # data.rear_spring_rate,
+        # data.tire_preasure_front,
+        # data.tire_preasure_back,
+        # data.runs)
     return {"status": "ok", "result": result}
 
 # For running backend independently:
