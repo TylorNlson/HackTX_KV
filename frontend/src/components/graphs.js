@@ -1,7 +1,7 @@
 import Plot from 'react-plotly.js';
-import "./galaxy.css"; // optional shared styling
+import "./graphs.css";
 
-function Galaxy({ plotData }) {
+function Graphs({ plotData }) {
   if (!plotData) {
     return (
       <div className="graphs">
@@ -73,4 +73,4 @@ function Galaxy({ plotData }) {
   );
 }
 
-export default Galaxy;
+export default Graphs;
