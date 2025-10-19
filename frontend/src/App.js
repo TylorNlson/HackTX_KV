@@ -2,6 +2,7 @@ import "./App.css";
 import SummaryPanel from "./components/summary";
 import SettingsPanel from "./components/settings";
 import GalaxyPanel from "./components/galaxy";
+import GraphsPanel from "./components/graphs";
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
           <SettingsPanel />
           <SummaryPanel />
           <GalaxyPanel />
+          <GraphsPanel />
         </div>
       </div>
     </div>
