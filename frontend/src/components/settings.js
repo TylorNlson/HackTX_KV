@@ -51,55 +51,36 @@ function Settings({setSummaryData, setPlotData, setPlotGalaxyData}) {
 
       console.log("Received simulation data:", data);
   
-      const totalRuns = raceResults.length;
-
-      // Example: if multiple entries share the same strategy name, count frequency
-      const strategyCounts = {};
-      raceResults.forEach(r => {
-        strategyCounts[r.name] = (strategyCounts[r.name] || 0) + 1;
-      });
-  
-      // Find most common strategy
-      const [topStrategy, topCount] = Object.entries(strategyCounts).reduce(
-        (a, b) => (b[1] > a[1] ? b : a),
-        ["None", 0]
-      );
-  
-      // Compute averages
-      const avgFuel =
-        raceResults.reduce((sum, r) => sum + r.starting_fuel, 0) / totalRuns;
-      const avgPitLap =
-        raceResults.reduce((sum, r) => sum + (r.pit_laps?.[0] ?? 0), 0) /
-        totalRuns;
-  
-      // Fill in summary data using meaningful values from your response
       setSummaryData({
-        winRate: ((topCount / totalRuns) * 100).toFixed(1), // % of top strategy
-        raceTime: (avgPitLap * 200).toFixed(0), // Example: pit lap proxy for race time
-        dnfRate: ((totalRuns - topCount) / totalRuns * 100).toFixed(1), // others as DNF
-        topStrategy: topStrategy,
-        avgFuel: avgFuel.toFixed(1),
+        winRate: data[0].win_probability,
+        meanTime: data[0].mean_time,
       });
   
       // --- Plot data for histogram & line chart ---
   
       setPlotData({
-        hist_data: raceResults.map(r => r.starting_fuel),
+        hist_data: [100, 105, 110, 102, 108, 99, 107, 103],
         line_data: {
-          x: raceResults.map((_, i) => i + 1),
-          y: raceResults.map(r => r.pit_laps?.[0] ?? 0),
+          x: [1, 2, 3, 4, 5, 6, 7, 8],
+          y: [25, 26, 24, 27, 28, 26, 25, 29],
         },
       });
   
       // --- Galaxy data (scatter plot): use real values ---
       setPlotGalaxyData({
-        x: raceResults.map(r => r.starting_fuel),
-        y: raceResults.map(r => r.pit_laps?.[0] ?? 0),
-        size: raceResults.map(r => {
-          const compounds = r.tire_compounds?.length || 1;
-          return compounds * 10; // use number of tire compounds as visual size factor
-        }),
-        label: raceResults.map(r => r.name),
+        x: [100, 105, 110, 102, 108, 99, 107, 103],
+        y: [25, 26, 24, 27, 28, 26, 25, 29],
+        size: [10, 15, 20, 12, 18, 14, 22, 17],
+        label: [
+          "1stop_L26_MH",
+          "1stop_L39_MH",
+          "1stop_L26_SH",
+          "1stop_L39_SH",
+          "1stop_L26_SM",
+          "1stop_L39_SM",
+          "1stop_L26_HM",
+          "1stop_L39_HM",
+        ],
       });
   
       console.log("Data processed successfully");
