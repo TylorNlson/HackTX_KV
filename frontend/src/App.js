@@ -1,12 +1,25 @@
-import control_panel from "./assets/control_panel.png";
 import "./App.css";
+import { useState } from "react";
+import SummaryPanel from "./components/summary";
+import SettingsPanel from "./components/settings";
+import GalaxyPanel from "./components/galaxy";
+import GraphsPanel from "./components/graphs";
 
 function App() {
+  const [summaryData, setSummaryData] = useState(null);
+  const [plotData, setPlotData] = useState(null);
+  const [plotGalaxyData, setPlotGalaxyData] = useState(null);
+  
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={control_panel} alt="control panel" />
-      </header>
+      <div className="App-background" alt="space background">
+        <div className="App-dashboard">
+          <SettingsPanel setSummaryData={setSummaryData} setPlotData={setPlotData} setPlotGalaxyData={setPlotGalaxyData}/>
+          <SummaryPanel data={summaryData}/>
+          <GalaxyPanel plotGalaxyData={plotGalaxyData}/>
+          <GraphsPanel plotData={plotData}/>
+        </div>
+      </div>
     </div>
   );
 }
