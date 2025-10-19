@@ -125,19 +125,41 @@ class SimulationConfig:
     vsc_duration_laps: int = 2
     vsc_lap_time_factor: float = 1.30  # VSC is faster than full SC
 
+
 @dataclass
 class Strategy:
-    """Pit strategy"""
+    """Pit strategy with fuel management"""
     name: str
     pit_laps: List[int]
     tire_compounds: List[TireCompound]
+    starting_fuel: float  # ← NEW: kg of fuel at race start
     engine_modes: Optional[List[EngineMode]] = None
 
     def __post_init__(self):
         if len(self.tire_compounds) != len(self.pit_laps) + 1:
-            raise ValueError(f"Need {len(self.pit_laps)+1} compounds for {len(self.pit_laps)} stops")
+            raise ValueError(f"Need {len(self.pit_laps) + 1} compounds for {len(self.pit_laps)} stops")
         if self.engine_modes is None:
             self.engine_modes = [EngineMode.NORMAL] * (len(self.pit_laps) + 1)
+
+        # F1 fuel rules validation
+        if self.starting_fuel > 110.0:
+            raise ValueError(f"F1 max fuel is 110kg, got {self.starting_fuel}kg")
+        if self.starting_fuel < 80.0:
+            raise ValueError(f"Starting fuel too low: {self.starting_fuel}kg (min ~80kg for race)")
+
+    def estimate_fuel_needed(self, race_laps: int, burn_rate: float = 1.4) -> float:
+        """Estimate minimum fuel needed for this strategy"""
+        # Calculate laps between each pit stop
+        pit_laps_extended = [0] + self.pit_laps + [race_laps]
+
+        # No refueling in F1, so we need fuel for entire race
+        return race_laps * burn_rate
+
+    def is_fuel_feasible(self, race_laps: int, burn_rate: float = 1.4) -> bool:
+        """Check if starting fuel is sufficient for the race"""
+        needed = self.estimate_fuel_needed(race_laps, burn_rate)
+        # Add 5% safety margin
+        return self.starting_fuel >= needed * 0.95
 
 # ============================================================================
 # COMPETITOR FIELD MODEL (NEW - PROPER IMPLEMENTATION)
@@ -201,22 +223,23 @@ class CompetitorField:
         ]
 
         for i in range(n):
-            if self.rng.random() < 0.65:  # 65% try 1-stop (more realistic for modern F1)
-                # Random pit window for 1-stop
+            # Random starting fuel (simulate different team risk levels)
+            start_fuel = float(self.rng.uniform(100.0, 110.0))
+
+            if self.rng.random() < 0.65:  # 65% 1-stop
                 pit_lap = self.rng.randint(
                     max(self.rc.race_laps // 3, 15),
                     min(2 * self.rc.race_laps // 3, self.rc.race_laps - 10)
                 )
-
                 compounds, code = one_stop_options[self.rng.randint(0, len(one_stop_options))]
 
                 strategies.append(Strategy(
                     name=f"Comp{i}_1stop_{code}_L{pit_lap}",
                     pit_laps=[pit_lap],
-                    tire_compounds=compounds
+                    tire_compounds=compounds,
+                    starting_fuel=start_fuel
                 ))
-            else:  # 35% do 2-stop
-                # Random pit windows for 2-stop
+            else:  # 35% 2-stop
                 pit1 = self.rng.randint(
                     max(self.rc.race_laps // 5, 10),
                     max(self.rc.race_laps // 3, 20)
@@ -225,13 +248,13 @@ class CompetitorField:
                     pit1 + 12,
                     min(3 * self.rc.race_laps // 4, self.rc.race_laps - 8)
                 )
-
                 compounds, code = two_stop_options[self.rng.randint(0, len(two_stop_options))]
 
                 strategies.append(Strategy(
                     name=f"Comp{i}_2stop_{code}_L{pit1}L{pit2}",
                     pit_laps=[pit1, pit2],
-                    tire_compounds=compounds
+                    tire_compounds=compounds,
+                    starting_fuel=start_fuel
                 ))
 
         return strategies
@@ -406,21 +429,22 @@ class RaceSimulator:
         )
 
     def _simulate_competitor_field_stochastic(self) -> np.ndarray:
-        """
-        Simulate competitor times WITH RUN-TO-RUN VARIANCE.
-        Returns: (N_runs, N_competitors) array of total race times
-        """
+        """Simulate competitor times WITH RUN-TO-RUN VARIANCE."""
         competitor_times = np.zeros((self.N_runs, self.rc.num_competitors))
 
         for comp_idx in range(self.rc.num_competitors):
             base_pace = self.competitor_field.competitor_base_pace[comp_idx]
             strategy = self.competitor_field.competitor_strategies[comp_idx]
 
-            # Calculate EXPECTED race time (deterministic part)
-            expected_time = self._calculate_expected_race_time(base_pace, strategy)
+            # Competitors use varied fuel loads (realistic spread)
+            competitor_fuel = self.rng.uniform(105.0, 109.0)
+
+            # Calculate EXPECTED race time with this fuel load
+            expected_time = self._calculate_expected_race_time(base_pace, strategy, competitor_fuel)
 
             # Add per-run stochastic variance
             for run_idx in range(self.N_runs):
+                # ... rest of the code unchanged ...
                 # DNF check
                 dnf_prob = 0.03 + 0.02 * max(0, base_pace / 2.0)
                 if self.rng.random() < dnf_prob:
@@ -454,11 +478,20 @@ class RaceSimulator:
 
         return competitor_times
 
-    def _calculate_expected_race_time(self, base_pace: float, strategy: Strategy) -> float:
+    def _calculate_expected_race_time(
+            self,
+            base_pace: float,
+            strategy: Strategy,
+            starting_fuel: float = None  # ← NEW: optional fuel override
+    ) -> float:
         """
         Calculate expected race time for a given pace and strategy.
         Uses same physics model as our car (deterministic part only).
         """
+        if starting_fuel is None:
+            # Competitors use standard fuel load
+            starting_fuel = 107.0
+
         total_time = 0.0
 
         # Stint lengths
@@ -469,6 +502,7 @@ class RaceSimulator:
             prev_pit = pit_lap
 
         current_lap = 0
+        fuel = starting_fuel
 
         for stint_idx, stint_length in enumerate(stint_laps):
             compound = strategy.tire_compounds[stint_idx]
@@ -483,15 +517,18 @@ class RaceSimulator:
                 tire_wear = (lap_in_stint / max(stint_length, 1)) * base_wear_rate * stint_length
                 tire_deg = self.cfg.k_wear_lap_time * (tire_wear ** 1.5)
 
-                # Fuel effect (decreasing through race)
-                fuel_fraction = 1.0 - (current_lap / self.rc.race_laps)
-                fuel_effect = self.cfg.k_fuel_lap_time * fuel_fraction * 50
+                # Fuel effect (current fuel load)
+                fuel_effect = self.cfg.k_fuel_lap_time * fuel
 
                 # Compound offset
                 lap_time += compound_offset + tire_deg + fuel_effect
 
                 total_time += lap_time
                 current_lap += 1
+
+                # Burn fuel
+                burn_rate = self.cfg.base_fuel_burn_rate * self.rc.track.fuel_usage
+                fuel = max(fuel - burn_rate, 0.0)
 
             # Pit stop (except after last stint)
             if stint_idx < len(strategy.pit_laps):
@@ -536,10 +573,10 @@ class RaceSimulator:
             lap_noise: np.ndarray,
             safety_cars: np.ndarray
     ) -> Dict:
-        """Simulate single race - UNCHANGED from before"""
+        """Simulate single race - NOW USES STRATEGY FUEL"""
 
         W = self.setup.initial_tire_wear
-        fuel = self.setup.fuel_start
+        fuel = strategy.starting_fuel  # ← CHANGED: Use strategy fuel, not car setup
         total_time = 0.0
         dnf = False
 
@@ -590,6 +627,11 @@ class RaceSimulator:
             burn_rate = self._compute_fuel_burn(current_engine_mode) * fuel_mult
             fuel = max(fuel - burn_rate, 0.0)
 
+            # NEW: Check if we ran out of fuel (automatic DNF)
+            if fuel <= 0.0 and lap < self.N_laps - 1:
+                dnf = True
+                break
+
             lap_times_out[lap] = lap_time
             tire_wear_out[lap] = W
             fuel_out[lap] = fuel
@@ -610,19 +652,24 @@ class RaceSimulator:
             engine_mode: EngineMode,
             noise: float
     ) -> float:
-        """F1 lap time model"""
+        """F1 lap time model with proper fuel effect"""
 
         tau_0 = self.rc.track.base_lap_time + self.setup.car_performance
 
+        # Tire wear (exponential degradation)
         tau_wear = self.cfg.k_wear_lap_time * (wear ** 1.5)
 
-        fuel_fraction = fuel / self.setup.fuel_start
-        tau_fuel = self.cfg.k_fuel_lap_time * fuel_fraction * 50
+        # Fuel load effect - F1: ~0.03-0.035s per kg
+        # At 110kg: +3.3s, at 0kg: +0s
+        tau_fuel = self.cfg.k_fuel_lap_time * fuel
 
+        # Compound speed
         compound_offset, _, _ = self.cfg.tire_properties[compound]
 
+        # Engine mode
         engine_factor = engine_mode.value
 
+        # Aero (simplified)
         tau_aero = self.cfg.k_downforce_lap_time * (1.0 - self.setup.downforce) * 0.5
 
         tau = (tau_0 + tau_wear + tau_fuel + tau_aero + compound_offset) / engine_factor
@@ -724,23 +771,36 @@ class SimulationResults:
 
     def print_summary(self):
         stats = self.get_statistics()
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Strategy: {self.strategy.name}")
         print(f"Pit stops: {self.strategy.pit_laps}")
-        print(f"Compounds: {[c.value for c in self.strategy.tire_compounds]}")
-        print(f"{'='*60}")
+
+        # 🛞 Show detailed tire stints with hardness and duration
+        print(f"Stint details:")
+        stint_ends = self.strategy.pit_laps + [self.race_conditions.race_laps]
+        prev = 0
+        for compound, end in zip(self.strategy.tire_compounds, stint_ends):
+            length = end - prev
+            print(f"  {compound.value.capitalize():<10} → Lap {end:<3d} "
+                  f"(stint length: {length:2d} laps)")
+            prev = end
+
+        print(f"{'=' * 60}")
         print(f"\nRace Time:")
-        print(f"  Mean:   {stats['mean_time']:.2f}s ({stats['mean_time']/60:.1f} min)")
+        print(f"  Mean:   {stats['mean_time']:.2f}s ({stats['mean_time'] / 60:.1f} min)")
         print(f"  Median: {stats['median_time']:.2f}s")
         print(f"  Std:    {stats['std_time']:.2f}s")
+
         print(f"\nFinishing Position:")
         print(f"  Mean:   P{stats['mean_position']:.1f}")
         print(f"  Median: P{stats['median_position']:.0f}")
+
         print(f"\nProbabilities:")
-        print(f"  Win (P1):  {stats['win_probability']*100:.1f}%")
-        print(f"  Podium:    {stats['podium_probability']*100:.1f}%")
-        print(f"  Top 5:     {stats['top5_probability']*100:.1f}%")
-        print(f"  DNF:       {stats['dnf_probability']*100:.2f}%")
+        print(f"  Win (P1):  {stats['win_probability'] * 100:.1f}%")
+        print(f"  Podium:    {stats['podium_probability'] * 100:.1f}%")
+        print(f"  Top 5:     {stats['top5_probability'] * 100:.1f}%")
+        print(f"  DNF:       {stats['dnf_probability'] * 100:.2f}%")
+
 
 # ============================================================================
 # STRATEGY OPTIMIZER (updated)
@@ -750,68 +810,149 @@ class StrategyOptimizer:
     def __init__(self, simulator: RaceSimulator):
         self.sim = simulator
 
-    def generate_strategies(self) -> List[Strategy]:
-        """Generate F1-realistic strategies"""
+    def generate_strategies(self, include_fuel_variants: bool = True) -> List[Strategy]:
+        """
+        Generate F1-realistic strategies with fuel load variations.
+
+        Args:
+            include_fuel_variants: If True, test multiple fuel loads per strategy
+        """
         strategies = []
         N = self.sim.N_laps
 
         compounds = [TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD]
 
-        # 1-stop strategies
-        for early_pit in [N//3, N//2, 2*N//3]:
+        # Fuel load options (F1 2024: max 110kg)
+        if include_fuel_variants:
+            # Test different fuel strategies
+            fuel_options = [
+                105.0,  # Conservative (extra margin)
+                107.0,  # Standard (most teams use this)
+                109.0,  # Aggressive (min fuel + small margin)
+            ]
+        else:
+            fuel_options = [107.0]  # Just use standard
+
+        # Estimate fuel consumption for Monaco
+        estimated_burn_per_lap = self.sim.cfg.base_fuel_burn_rate * self.sim.rc.track.fuel_usage
+        min_fuel_needed = N * estimated_burn_per_lap
+
+        print(f"  Estimated fuel burn: {estimated_burn_per_lap:.2f} kg/lap")
+        print(f"  Minimum fuel for {N} laps: {min_fuel_needed:.1f} kg")
+
+        # Filter out infeasible fuel loads
+        fuel_options = [f for f in fuel_options if f >= min_fuel_needed * 1.02]  # 2% safety margin
+
+        if not fuel_options:
+            print(f"  ⚠️  Warning: All fuel options too low, using minimum + 5%")
+            fuel_options = [min_fuel_needed * 1.05]
+
+        print(f"  Testing {len(fuel_options)} fuel loads: {fuel_options}")
+
+        # =====================================================================
+        # 1-STOP STRATEGIES
+        # =====================================================================
+
+        for pit_lap in [N // 3, 2 * N // 5, N // 2, 3 * N // 5, 2 * N // 3]:
             for start_compound in compounds:
                 for end_compound in compounds:
-                    if start_compound != end_compound:  # F1 rule
-                        strategies.append(Strategy(
-                            name=f"1-stop L{early_pit}: {start_compound.value[0].upper()}-{end_compound.value[0].upper()}",
-                            pit_laps=[early_pit],
-                            tire_compounds=[start_compound, end_compound]
-                        ))
+                    if start_compound != end_compound:  # F1 rule: must use 2 compounds
+                        for fuel in fuel_options:
+                            # Strategy naming
+                            fuel_label = ""
+                            if len(fuel_options) > 1:
+                                if fuel == min(fuel_options):
+                                    fuel_label = "_LightFuel"
+                                elif fuel == max(fuel_options):
+                                    fuel_label = "_HeavyFuel"
 
-        # 2-stop strategies
-        for pit1 in [N//4, N//3]:
-            for pit2 in [N//2, 2*N//3]:
-                for c1, c2, c3 in [
-                    (TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD),
-                    (TireCompound.MEDIUM, TireCompound.SOFT, TireCompound.MEDIUM),
-                    (TireCompound.SOFT, TireCompound.SOFT, TireCompound.MEDIUM),
-                ]:
+                            strategies.append(Strategy(
+                                name=f"1stop_L{pit_lap}_{start_compound.value[0].upper()}{end_compound.value[0].upper()}{fuel_label}",
+                                pit_laps=[pit_lap],
+                                tire_compounds=[start_compound, end_compound],
+                                starting_fuel=fuel
+                            ))
+
+        # =====================================================================
+        # 2-STOP STRATEGIES
+        # =====================================================================
+
+        two_stop_configs = [
+            (N // 4, N // 2),  # Early-mid
+            (N // 3, 2 * N // 3),  # Balanced
+            (N // 4, 3 * N // 4),  # Early-late
+        ]
+
+        two_stop_compounds = [
+            (TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD),
+            (TireCompound.MEDIUM, TireCompound.SOFT, TireCompound.MEDIUM),
+            (TireCompound.SOFT, TireCompound.SOFT, TireCompound.MEDIUM),
+            (TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.MEDIUM),
+        ]
+
+        for pit1, pit2 in two_stop_configs:
+            for c1, c2, c3 in two_stop_compounds:
+                # 2-stop strategies typically use less fuel (can push harder)
+                # Use lighter fuel loads for 2-stop
+                fuel_options_2stop = [f for f in fuel_options if f <= max(fuel_options)]
+
+                for fuel in fuel_options_2stop:
+                    fuel_label = ""
+                    if len(fuel_options_2stop) > 1:
+                        if fuel == min(fuel_options_2stop):
+                            fuel_label = "_LightFuel"
+
                     strategies.append(Strategy(
-                        name=f"2-stop L{pit1},L{pit2}: {c1.value[0].upper()}-{c2.value[0].upper()}-{c3.value[0].upper()}",
+                        name=f"2stop_L{pit1}L{pit2}_{c1.value[0].upper()}{c2.value[0].upper()}{c3.value[0].upper()}{fuel_label}",
                         pit_laps=[pit1, pit2],
-                        tire_compounds=[c1, c2, c3]
+                        tire_compounds=[c1, c2, c3],
+                        starting_fuel=fuel
                     ))
 
-        return strategies
+        print(f"  Generated {len(strategies)} total strategies")
+
+        # Filter out infeasible strategies (not enough fuel)
+        feasible_strategies = []
+        for s in strategies:
+            if s.is_fuel_feasible(N, estimated_burn_per_lap):
+                feasible_strategies.append(s)
+            else:
+                pass  # Silently skip infeasible strategies
+
+        print(f"  {len(feasible_strategies)} strategies are fuel-feasible")
+
+        return feasible_strategies
 
     def evaluate_all(
-        self,
-        strategies: List[Strategy],
-        risk_tolerance: float = 0.5
+            self,
+            strategies: List[Strategy],
+            risk_tolerance: float = 0.5
     ) -> List[Tuple[Strategy, SimulationResults, float]]:
+        """Evaluate all strategies and return ranked list"""
         results = []
 
         for i, strategy in enumerate(strategies):
-            print(f"Evaluating {i+1}/{len(strategies)}: {strategy.name}...", end='\r')
+            print(f"Evaluating {i + 1}/{len(strategies)}: {strategy.name:50s}", end='\r')
             try:
                 sim_results = self.sim.simulate_strategy(strategy)
                 utility = sim_results.compute_utility(risk_tolerance)
                 results.append((strategy, sim_results, utility))
             except Exception as e:
-                print(f"\nSkipping {strategy.name}: {e}")
+                print(f"\n⚠️  Skipping {strategy.name}: {e}")
                 continue
 
         results.sort(key=lambda x: x[2], reverse=True)
 
-        print("\n" + "="*70)
+        print("\n" + "=" * 80)
         print("TOP 10 STRATEGIES")
-        print("="*70)
+        print("=" * 80)
+        print(f"{'Rank':<5} {'Strategy':<45} {'Fuel':<6} {'Utility':<7} {'Win%':<7} {'Pod%':<7} {'Avg Pos':<8}")
+        print("-" * 80)
         for i, (strat, res, util) in enumerate(results[:10]):
             stats = res.get_statistics()
-            print(f"{i+1:2d}. {strat.name:40s} | U:{util:.3f} | "
-                  f"W:{stats['win_probability']*100:5.1f}% | "
-                  f"Pod:{stats['podium_probability']*100:5.1f}% | "
-                  f"Avg:P{stats['mean_position']:.1f}")
+            print(f"{i + 1:<5} {strat.name:<45} {strat.starting_fuel:>5.1f}kg {util:>6.3f} "
+                  f"{stats['win_probability'] * 100:>6.1f}% {stats['podium_probability'] * 100:>6.1f}% "
+                  f"P{stats['mean_position']:>5.1f}")
 
         return results
 
