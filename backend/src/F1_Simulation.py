@@ -150,7 +150,7 @@ class CarEngineering:
         straight_delta = (1.0 - straight_multiplier) * track.base_lap_time * straight_fraction * 0.4
         delta += corner_delta + straight_delta
         # ↓ NEW: cap total delta to ±0.4 s/lap realistic range
-        delta = np.clip(delta, -0.4, 0.4)
+        delta = np.clip(delta, -0.6, 0.3)
         return delta
 
     def get_fuel_consumption_rate(self, engine_mode: EngineMode, track_fuel_factor: float = 1.0) -> float:
@@ -367,8 +367,8 @@ class RaceConditions:
 class SimulationConfig:
     num_runs: int = 10000
     random_seed: Optional[int] = 42
-    k_wear_lap_time: float = 12.0
-    k_fuel_lap_time: float = 0.03
+    k_wear_lap_time: float = 8.0
+    k_fuel_lap_time: float = 0.035
     k_downforce_lap_time: float = 1.2
 
     tire_properties: Dict[TireCompound, Tuple[float, float, float]] = field(default_factory=lambda: {
@@ -379,7 +379,7 @@ class SimulationConfig:
         TireCompound.WET:   (5.0, 0.015, 8.0),
     })
 
-    lap_time_noise_std = 0.35  # was 0.15
+    lap_time_noise_std = 0.20  # was 0.15
     wear_rate_noise_std = 0.25
     fuel_burn_noise_std = 0.08
     base_fuel_burn_rate: float = 1.3
@@ -649,7 +649,7 @@ class RaceSimulator:
                 random_events = self.rng.normal(0, 2.0)
 
                 # FIX: Increase total variance to allow more competitive spread
-                total_std = np.sqrt(lap_variance_total ** 2 + pit_variance ** 2 + 16.0)  # ← Changed from 4.0
+                total_std = np.sqrt(lap_variance_total ** 2 + pit_variance ** 2 + 9.0)  # ← Changed from 4.0
 
                 run_variance = self.rng.normal(0, total_std)
                 race_time = expected_time + run_variance + random_events
