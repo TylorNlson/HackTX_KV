@@ -4,30 +4,39 @@ import "./galaxy.css"; // optional shared styling
 function Galaxy({ plotData }) {
   if (!plotData) {
     return (
-      <div className="graphs">
-        <div className="graphs-panel">
+      <div className="galaxy">
+        <div className="galaxy-panel">
           No plot data available.
         </div>
       </div>
     );
   }
 
+  // generate random data
+  const N = 5000;
+  const x = Array.from({ length: N }, () => Math.random());
+  const y = Array.from({ length: N }, () => Math.random());
+  const successRate = plotData.successRate;
+  const labels = Array.from({ length: N }, (_, i) => `Point ${i + 1}`);
+
   return (
-    <div className="graphs">
-      <div className="graphs-panel">
-        <div className="graph-container">
+    <div className="galaxy">
+      <div className="galaxy-panel">
+        <div className="galaxy-container">
           <Plot
             data={[
               {
-                x: plotData.hist_data,
-                type: 'histogram',
-                marker: { color: 'skyblue' },
-                opacity: 0.8,
-                name: 'Lap Time Distribution',
+                x: plotData.x,
+                y: plotData.y,
+                type: 'scatter',
+                marker: 'markers',
+                color: 'white',
+                opacity: 1,
+                name: 'Laps',
               },
             ]}
             layout={{
-              title: 'Lap Time Distribution',
+              title: 'Lap Data',
               xaxis: { title: 'Lap Time (s)', color: '#fff' },
               yaxis: { title: 'Frequency', color: '#fff' },
               paper_bgcolor: 'rgba(0,0,0,0)',
@@ -41,7 +50,7 @@ function Galaxy({ plotData }) {
           />
         </div>
 
-        <div className="graph-container">
+        <div className="galaxy-container">
           <Plot
             data={[
               {
