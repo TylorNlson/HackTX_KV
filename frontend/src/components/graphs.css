@@ -14,20 +14,33 @@
     width: 100%;
     min-width: 0;
     height: 100%;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    padding: 20px;
+    max-height: 100%;
+    display: grid;               /* stack plots vertically */
+    grid-template-rows: 1fr 1fr; 
+    gap: 20px;                   /* more spacing between plots */
+    padding: 20px;               /* more padding for visibility */
+    box-sizing: border-box;
+    overflow: hidden;
 
     /* font style */
     font-size: 1.2rem;
     color: white;
-    text-align: center;
 }
 
 .graph-container {
-    flex: 1;
     min-height: 0;
-    overflow: hidden;
-  }
+    min-width: 0;
+    overflow: hidden;          /* clip Plotly canvas overflow */
+    border-radius: 10px;
+    padding: 12px;             /* more room for axes and labels */
+    box-sizing: border-box;
+    background: rgba(255,255,255,0.02); /* subtle background for visibility */
+}
+
+/* Ensure Plotly fills the container */
+.graph-container .js-plotly-plot,
+.graph-container .plot-container,
+.graph-container .plotly {
+    width: 100% !important;
+    height: 100% !important;
+}

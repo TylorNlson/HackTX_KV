@@ -16,7 +16,8 @@ function App() {
         <div className="App-dashboard">
           <SettingsPanel setSummaryData={setSummaryData} setPlotData={setPlotData} setPlotGalaxyData={setPlotGalaxyData}/>
           <SummaryPanel data={summaryData}/>
-          <GalaxyPanel plotGalaxyData={plotGalaxyData}/>
+          {/* Pass the prop name Galaxy expects */}
+          <GalaxyPanel plotData={plotGalaxyData}/>
           <GraphsPanel plotData={plotData}/>
         </div>
       </div>
